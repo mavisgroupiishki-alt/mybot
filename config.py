@@ -1,0 +1,32 @@
+
+BOT_TOKEN = "8666949420:AAHP8ct4q8D41lwtMX5JPCTv1xi-swjZxHE"
+
+ADMIN_CHAT_ID = -5193382500
+
+VIDEO_LIBRARY = {
+    "Аттестация": {
+        "description": "Краткий гайд по процедуре аттестации сотрудников.\nЧто нужно знать руководителю и HR.",
+        "video": "https://drive.google.com/uc?export=download&id=1Ztdz4evnkFQF6ceGBvg5FsdBqJu4n8eR",
+        "fallback_url": "https://example.com/videos/attestaciya.mp4",
+    },
+    "Охрана труда": {
+        "description": "Основные требования охраны труда.\nИнструктаж, документация, ответственность.",
+        "video": "https://example.com/videos/ohrana_truda.mp4",
+        "fallback_url": "https://example.com/videos/ohrana_truda.mp4",
+    },
+    "Пожарная безопасность": {
+        "description": "Правила пожарной безопасности на предприятии.\nЧто делать при пожаре.",
+        "video": "https://example.com/videos/pozharnaya.mp4",
+        "fallback_url": "https://example.com/videos/pozharnaya.mp4",
+    },
+    "Электробезопасность": {
+        "description": "Группы допуска по электробезопасности.\nТребования и порядок присвоения.",
+        "video": "https://example.com/videos/electro.mp4",
+        "fallback_url": "https://example.com/videos/electro.mp4",
+    },
+    "Первая помощь": {
+        "description": "Алгоритм оказания первой помощи.\nОбязанности работодателя и сотрудников.",
+        "video": "https://example.com/videos/pervaya_pomosh.mp4",
+        "fallback_url": "https://example.com/videos/pervaya_pomosh.mp4",
+    },
+}

@@ -1,13 +1,12 @@
-
-BOT_TOKEN = "8666949420:AAHP8ct4q8D41lwtMX5JPCTv1xi-swjZxHE"
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8666949420:AAHP8ct4q8D41lwtMX5JPCTv1xi-swjZxHE")
 
 ADMIN_CHAT_ID = -5193382500
 
 VIDEO_LIBRARY = {
     "Аттестация": {
         "description": "Краткий гайд по процедуре аттестации сотрудников.\nЧто нужно знать руководителю и HR.",
-        "video": "https://drive.google.com/uc?export=download&id=1Ztdz4evnkFQF6ceGBvg5FsdBqJu4n8eR",
-        "fallback_url": "https://example.com/videos/attestaciya.mp4",
+        "video": "https://drive.google.com/uc?export=download&id=ВАШ_ID",
+        "fallback_url": "https://drive.google.com/uc?export=download&id=ВАШ_ID",
     },
     "Охрана труда": {
         "description": "Основные требования охраны труда.\nИнструктаж, документация, ответственность.",

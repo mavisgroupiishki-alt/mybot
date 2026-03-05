@@ -17,7 +17,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-ASK_NAME, ASK_COMPANY, ASK_PHONE, MAIN_MENU = range(4)
+# Состояния разговора
+(ASK_NAME, ASK_COMPANY, ASK_PHONE, MAIN_MENU,
+ CB_NAME, CB_PHONE, CB_QUESTION, CB_TIME) = range(8)
 
 
 async def send_telegram_notification(context, user_data):
@@ -25,7 +27,7 @@ async def send_telegram_notification(context, user_data):
         username = user_data.get("username", "нет")
         username_str = f"@{username}" if username != "нет" else "нет username"
         text = (
-            "🔔 *Новая заявка!*\n"
+            "🔔 *Новая регистрация!*\n"
             "─────────────────\n"
             f"👤 *Имя:* {user_data.get('name', '—')}\n"
             f"🏢 *Компания:* {user_data.get('company', '—')}\n"
@@ -34,9 +36,27 @@ async def send_telegram_notification(context, user_data):
             f"🆔 *ID:* `{user_data.get('telegram_id', '—')}`"
         )
         await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=text, parse_mode="Markdown")
-        logger.info(f"Notification sent for user {user_data.get('name')}")
     except Exception as e:
-        logger.error(f"Failed to send Telegram notification: {e}")
+        logger.error(f"Failed to send notification: {e}")
+
+
+async def send_callback_notification(context, user_data):
+    try:
+        username = user_data.get("username", "нет")
+        username_str = f"@{username}" if username != "нет" else "нет username"
+        text = (
+            "📞 *Заявка на консультацию!*\n"
+            "─────────────────\n"
+            f"👤 *Имя:* {user_data.get('cb_name', '—')}\n"
+            f"📞 *Телефон:* {user_data.get('cb_phone', '—')}\n"
+            f"❓ *Вопрос:* {user_data.get('cb_question', '—')}\n"
+            f"🕐 *Удобное время:* {user_data.get('cb_time', '—')}\n"
+            f"🎯 *Тема просмотра:* {user_data.get('last_topic', '—')}\n"
+            f"💬 *Telegram:* {username_str}"
+        )
+        await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=text, parse_mode="Markdown")
+    except Exception as e:
+        logger.error(f"Failed to send callback notification: {e}")
 
 
 def get_topics_keyboard():
@@ -47,24 +67,39 @@ def get_topics_keyboard():
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 
+def get_time_keyboard():
+    """Кнопки с вариантами удобного времени (9:00 – 18:00)."""
+    keyboard = ReplyKeyboardMarkup([
+        ["🕙 9:00 – 11:00", "🕚 11:00 – 13:00"],
+        ["🕐 13:00 – 15:00", "🕒 15:00 – 18:00"],
+        ["📅 В любое время (9:00 – 18:00)"],
+    ], resize_keyboard=True)
+    return keyboard
+
+
+def get_after_video_keyboard():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📞 Оставить заявку на консультацию", callback_data="request_callback")],
+        [InlineKeyboardButton("🎬 Выбрать другую тему", callback_data="choose_topic")],
+    ])
+
+
 def find_topic(text):
-    """Ищет тему по полному совпадению, потом по частичному."""
     text = text.strip().lower()
-    # Сначала точное совпадение
     for key in VIDEO_LIBRARY:
         if text == key.lower():
             return key
-    # Потом частичное
     for key in VIDEO_LIBRARY:
         if text in key.lower() or key.lower() in text:
             return key
-    # Потом по отдельным словам
     for key in VIDEO_LIBRARY:
         for word in text.split():
             if len(word) >= 3 and word in key.lower():
                 return key
     return None
 
+
+# ─── РЕГИСТРАЦИЯ ───────────────────────────────────────────
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(
@@ -120,40 +155,37 @@ async def ask_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return MAIN_MENU
 
 
+# ─── ГЛАВНОЕ МЕНЮ ──────────────────────────────────────────
+
 async def handle_topic(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_text = update.message.text.strip()
     matched_key = find_topic(user_text)
 
     if matched_key:
+        context.user_data["last_topic"] = matched_key
         video_info = VIDEO_LIBRARY[matched_key]
 
-        # Отправляем описание
         await update.message.reply_text(
             f"🎬 *{matched_key}*\n\n{video_info['description']}",
             parse_mode="Markdown",
+            reply_markup=ReplyKeyboardRemove(),
         )
 
-        # Пробуем отправить видео
         video = video_info.get("video")
         if video:
             try:
                 await update.message.reply_video(video=video, caption=f"📌 {matched_key}")
             except Exception as e:
                 logger.error(f"Could not send video: {e}")
-                # Если видео не отправилось — шлём ссылку
                 fallback = video_info.get("fallback_url", video)
-                await update.message.reply_text(
-                    f"📎 Ссылка на видео:\n{fallback}"
-                )
+                await update.message.reply_text(f"📎 Ссылка на видео:\n{fallback}")
         else:
             await update.message.reply_text("⏳ Видео по этой теме скоро будет добавлено.")
 
-        # Всегда показываем меню после ответа
         await update.message.reply_text(
-            "Выберите другую тему или напишите ключевое слово 👇",
-            reply_markup=get_topics_keyboard(),
+            "Что хотите сделать дальше?",
+            reply_markup=get_after_video_keyboard(),
         )
-
     else:
         topics_list = "\n".join(f"• {k}" for k in VIDEO_LIBRARY.keys())
         await update.message.reply_text(
@@ -167,6 +199,80 @@ async def handle_topic(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     return MAIN_MENU
 
 
+async def handle_after_video_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    query = update.callback_query
+    await query.answer()
+
+    if query.data == "choose_topic":
+        await query.edit_message_text("Выберите тему 👇")
+        await query.message.reply_text(
+            "Выберите тему из меню:",
+            reply_markup=get_topics_keyboard(),
+        )
+        return MAIN_MENU
+
+    elif query.data == "request_callback":
+        await query.edit_message_text(
+            "📞 *Заявка на консультацию*\n\n"
+            "Шаг 1 из 4\n\n"
+            "Как вас зовут? (Имя и фамилия)",
+            parse_mode="Markdown",
+        )
+        return CB_NAME
+
+    return MAIN_MENU
+
+
+# ─── ФОРМА ОБРАТНОЙ СВЯЗИ ──────────────────────────────────
+
+async def cb_ask_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    context.user_data["cb_name"] = update.message.text.strip()
+    await update.message.reply_text(
+        "Шаг 2 из 4\n\n"
+        "📞 Введите ваш номер телефона:",
+        reply_markup=ReplyKeyboardRemove(),
+    )
+    return CB_PHONE
+
+
+async def cb_ask_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    context.user_data["cb_phone"] = update.message.text.strip()
+    await update.message.reply_text(
+        "Шаг 3 из 4\n\n"
+        "❓ Какой вопрос вас интересует?",
+    )
+    return CB_QUESTION
+
+
+async def cb_ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    context.user_data["cb_question"] = update.message.text.strip()
+    await update.message.reply_text(
+        "Шаг 4 из 4\n\n"
+        "🕐 В какое время вам удобнее перезвонить?\n\n"
+        "Мы работаем с 9:00 до 18:00. Выберите удобный интервал или напишите конкретное время:",
+        reply_markup=get_time_keyboard(),
+    )
+    return CB_TIME
+
+
+async def cb_ask_time(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    context.user_data["cb_time"] = update.message.text.strip()
+
+    await send_callback_notification(context, context.user_data)
+
+    await update.message.reply_text(
+        "✅ *Заявка принята!*\n\n"
+        "Мы свяжемся с вами в ближайшее время. 🙌",
+        parse_mode="Markdown",
+        reply_markup=ReplyKeyboardRemove(),
+    )
+    await update.message.reply_text(
+        "Что хотите сделать дальше?",
+        reply_markup=get_after_video_keyboard(),
+    )
+    return MAIN_MENU
+
+
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(
         "Диалог завершён. Напишите /start чтобы начать заново.",
@@ -174,6 +280,8 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     )
     return ConversationHandler.END
 
+
+# ─── MAIN ──────────────────────────────────────────────────
 
 def main():
     application = Application.builder().token(BOT_TOKEN).build()
@@ -186,7 +294,14 @@ def main():
                 MessageHandler(filters.TEXT & ~filters.COMMAND, ask_company_text),
             ],
             ASK_PHONE:   [MessageHandler(filters.TEXT & ~filters.COMMAND, ask_phone)],
-            MAIN_MENU:   [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_topic)],
+            MAIN_MENU:   [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_topic),
+                CallbackQueryHandler(handle_after_video_buttons, pattern="^(choose_topic|request_callback)$"),
+            ],
+            CB_NAME:     [MessageHandler(filters.TEXT & ~filters.COMMAND, cb_ask_name)],
+            CB_PHONE:    [MessageHandler(filters.TEXT & ~filters.COMMAND, cb_ask_phone)],
+            CB_QUESTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, cb_ask_question)],
+            CB_TIME:     [MessageHandler(filters.TEXT & ~filters.COMMAND, cb_ask_time)],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
         allow_reentry=True,

@@ -1,6 +1,6 @@
 import os
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "8666949420:AAHP8ct4q8D41lwtMX5JPCTv1xi-swjZxHE")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 
 ADMIN_CHAT_ID = 1112419667
 

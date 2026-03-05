@@ -45,7 +45,7 @@ async def send_callback_notification(context, user_data):
         username = user_data.get("username", "нет")
         username_str = f"@{username}" if username != "нет" else "нет username"
         text = (
-            "📞 *Заявка на консультацию!*\n"
+            "‼️ *ВАЖНО! Заявка на консультацию!*\n"
             "─────────────────\n"
             f"👤 *Имя:* {user_data.get('cb_name', '—')}\n"
             f"📞 *Телефон:* {user_data.get('cb_phone', '—')}\n"
@@ -54,7 +54,7 @@ async def send_callback_notification(context, user_data):
             f"🎯 *Тема просмотра:* {user_data.get('last_topic', '—')}\n"
             f"💬 *Telegram:* {username_str}"
         )
-        await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=text, parse_mode="Markdown")
+        await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=text, parse_mode="Markdown", disable_notification=False)
     except Exception as e:
         logger.error(f"Failed to send callback notification: {e}")
 

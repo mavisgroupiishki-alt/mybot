@@ -267,8 +267,8 @@ async def cb_ask_time(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
         reply_markup=ReplyKeyboardRemove(),
     )
     await update.message.reply_text(
-        "Выберите тему из меню 👇",
-        reply_markup=get_topics_keyboard(),
+        "Что хотите сделать дальше?",
+        reply_markup=get_after_video_keyboard(),
     )
     return MAIN_MENU
 
